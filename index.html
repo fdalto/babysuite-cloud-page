@@ -125,16 +125,17 @@
   <section id="tab-print" class="tab-panel">
     <div class="print-wrap">
       <h2 class="print-title">Impressão</h2>
-      <div id="print-status" style="opacity:.7; font-size: 13px; margin: 6px 0 10px;"></div>
-
-      <div class="print-grid">
-        <div class="print-box"></div>
-        <div class="print-box"></div>
-        <div class="print-box"></div>
-        <div class="print-box"></div>
-        <div class="print-box"></div>
-        <div class="print-box"></div>
+      <div id="print-status">Nenhuma imagem recebida ainda.</div>
+      <div class="print-actions">
+        <button class="btn" id="btnSendPrintImages" type="button">Enviar imagens</button>
+        <button class="btn btn-fechar" id="btnClearPrintImages" type="button">Limpar</button>
       </div>
+      <div class="print-endpoint-wrap">
+        <label for="printUploadEndpoint">Endpoint de envio (opcional):</label>
+        <input id="printUploadEndpoint" type="url" placeholder="https://seu-endpoint/upload" />
+      </div>
+
+      <div class="print-grid" id="printGrid"></div>
     </div>
   </section>
 </div>

@@ -133,6 +133,7 @@ body{
 .print-wrap{
   height: 100%;
   padding: 18px;
+  overflow: auto;
 }
 
 .print-title{
@@ -749,4 +750,58 @@ body{
   border-radius: 12px;
   overflow: hidden;
   aspect-ratio: 4 / 3; /* ajuste se quiser */
+}
+
+.print-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  margin: 8px 0 10px;
+}
+
+.print-endpoint-wrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin: 0 0 12px 0;
+  flex-wrap: wrap;
+}
+
+.print-endpoint-wrap label{
+  font-size: 13px;
+  opacity: .85;
+  font-weight: 700;
+}
+
+.print-endpoint-wrap input{
+  width: min(780px, 100%);
+  min-width: 260px;
+  height: 36px;
+  border: 1px solid rgba(15,23,42,.15);
+  border-radius: 10px;
+  padding: 0 10px;
+  background: #fff;
+}
+
+.print-card{
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(16,24,40,.08);
+}
+
+.print-card img{
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display:block;
+  background:#111;
+}
+
+.print-meta{
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.35;
 }
