@@ -6,6 +6,7 @@
   const printGridEl = document.getElementById("printGrid");
   const printStatusEl = document.getElementById("print-status");
   const sendBtnEl = document.getElementById("btnSendPrintImages");
+  const printBtnEl = document.getElementById("btnPrintLayout");
   const clearBtnEl = document.getElementById("btnClearPrintImages");
   const endpointInputEl = document.getElementById("printUploadEndpoint");
 
@@ -40,12 +41,26 @@
     }
   }
 
+  function formatDicomDate(raw) {
+    const s = String(raw || "").trim();
+    if (!/^\d{8}$/.test(s)) return s || "-";
+    return `${s.slice(6, 8)}/${s.slice(4, 6)}/${s.slice(0, 4)}`;
+  }
+
+  function readDicomFields(metadata) {
+    const m = metadata && typeof metadata === "object" ? metadata : {};
+    return {
+      nome: m.PatientName || m.patient_name || "-",
+      data: formatDicomDate(m.StudyDate || m.study_date || ""),
+      registro: m.PatientID || m.patient_id || "-",
+      dn: formatDicomDate(m.PatientBirthDate || m.patient_birth_date || m.DN || ""),
+      modalidade: m.Modality || m.modality || "-",
+    };
+  }
+
   function summarizeMetadata(metadata) {
-    if (!metadata || typeof metadata !== "object") return "sem metadata";
-    const modality = metadata.Modality || metadata.modality || "?";
-    const patient = metadata.PatientName || metadata.patient_name || metadata.PatientID || metadata.patient_id || "-";
-    const study = metadata.StudyInstanceUID || metadata.study_instance_uid || "-";
-    return `Mod: ${modality} | Paciente: ${patient} | Study: ${study}`;
+    const f = readDicomFields(metadata);
+    return `Nome: ${f.nome} | Data: ${f.data} | Registro: ${f.registro} | DN: ${f.dn} | Modalidade: ${f.modalidade}`;
   }
 
   function renderPrintImages() {
@@ -109,6 +124,175 @@
     });
     window.__BRIDGE_PRINT_IMAGES__ = [];
     renderPrintImages();
+  }
+
+  function splitIntoPages(items, perPage) {
+    const pages = [];
+    for (let i = 0; i < items.length; i += perPage) {
+      pages.push(items.slice(i, i + perPage));
+    }
+    return pages;
+  }
+
+  function choosePrintLayout(total) {
+    if (total > 18) return { perPage: 8, rows: 4, cols: 2 };
+    if (total % 8 === 0) return { perPage: 8, rows: 4, cols: 2 };
+    if (total % 6 === 0) return { perPage: 6, rows: 3, cols: 2 };
+
+    const r6 = total % 6;
+    const r8 = total % 8;
+    if (r6 < r8) return { perPage: 6, rows: 3, cols: 2 };
+    return { perPage: 8, rows: 4, cols: 2 };
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function buildHeaderHtml(fields) {
+    return `
+      <header class="sheet-header">
+        <h1>Impressão de Imagens</h1>
+        <div class="sheet-header-grid">
+          <div><strong>Nome:</strong> ${escapeHtml(fields.nome)}</div>
+          <div><strong>Data:</strong> ${escapeHtml(fields.data)}</div>
+          <div><strong>Registro:</strong> ${escapeHtml(fields.registro)}</div>
+          <div><strong>DN:</strong> ${escapeHtml(fields.dn)}</div>
+          <div><strong>Modalidade:</strong> ${escapeHtml(fields.modalidade)}</div>
+        </div>
+      </header>
+    `;
+  }
+
+  function openPrintWindow() {
+    const items = window.__BRIDGE_PRINT_IMAGES__;
+    if (!items.length) {
+      setPrintStatus("Sem imagens para imprimir.");
+      return;
+    }
+
+    const layout = choosePrintLayout(items.length);
+    const pages = splitIntoPages(items, layout.perPage);
+    const firstFields = readDicomFields(items[0]?.metadata || {});
+
+    const pagesHtml = pages
+      .map((pageItems, pageIdx) => {
+        const cards = pageItems
+          .map((item, idx) => {
+            const n = pageIdx * layout.perPage + idx + 1;
+            return `
+              <article class="sheet-card">
+                <img src="${item.objectUrl}" alt="Imagem ${n}" />
+              </article>
+            `;
+          })
+          .join("");
+
+        return `
+          <section class="sheet ${pageIdx < pages.length - 1 ? "with-break" : ""}">
+            ${pageIdx === 0 ? buildHeaderHtml(firstFields) : ""}
+            <main class="sheet-grid layout-${layout.perPage}">
+              ${cards}
+            </main>
+            <footer class="sheet-footer">${pageIdx + 1}</footer>
+          </section>
+        `;
+      })
+      .join("");
+
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!printWindow) {
+      setPrintStatus("Bloqueio de pop-up. Permita pop-ups para imprimir.");
+      return;
+    }
+
+    const html = `
+      <!doctype html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>Impressão</title>
+        <style>
+          @page { size: A4 portrait; margin: 1cm; }
+          * { box-sizing: border-box; }
+          html, body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+          .sheet {
+            min-height: calc(29.7cm - 2cm);
+            display: flex;
+            flex-direction: column;
+          }
+          .with-break { break-after: page; page-break-after: always; }
+          .sheet-header {
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 4mm;
+            margin-bottom: 4mm;
+          }
+          .sheet-header h1 {
+            margin: 0 0 3mm 0;
+            font-size: 16px;
+          }
+          .sheet-header-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 2mm 6mm;
+            font-size: 12px;
+          }
+          .sheet-grid {
+            flex: 1;
+            display: grid;
+            gap: 3mm;
+            min-height: 0;
+          }
+          .sheet-grid.layout-8 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: repeat(4, minmax(0, 1fr));
+          }
+          .sheet-grid.layout-6 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-rows: repeat(3, minmax(0, 1fr));
+          }
+          .sheet-card {
+            border: 1px solid #aaa;
+            overflow: hidden;
+            border-radius: 3mm;
+            background: #fff;
+            min-height: 0;
+          }
+          .sheet-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            background: #111;
+          }
+          .sheet-footer {
+            margin-top: 3mm;
+            text-align: center;
+            font-size: 12px;
+          }
+        </style>
+      </head>
+      <body>
+        ${pagesHtml}
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+    };
+
+    setPrintStatus(`Layout de impressão gerado: ${items.length} imagem(ns).`);
   }
 
   async function sendImagesToEndpoint() {
@@ -236,6 +420,10 @@
 
   if (sendBtnEl) {
     sendBtnEl.addEventListener("click", sendImagesToEndpoint);
+  }
+
+  if (printBtnEl) {
+    printBtnEl.addEventListener("click", openPrintWindow);
   }
 
   if (clearBtnEl) {

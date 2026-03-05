@@ -759,6 +759,16 @@ body{
   margin: 8px 0 10px;
 }
 
+.btn-print{
+  border: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #2f76ff, #1f5ddd);
+}
+
+.btn-print-icon{
+  margin-right: 6px;
+}
+
 .print-endpoint-wrap{
   display:flex;
   align-items:center;
