@@ -13,6 +13,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+function setIAButtonLoading(isLoading) {
+  const botaoIA = document.getElementById("IAButton");
+  if (!botaoIA) return;
+  botaoIA.classList.toggle("is-loading", isLoading);
+  botaoIA.disabled = isLoading;
+  botaoIA.setAttribute("aria-busy", isLoading ? "true" : "false");
+}
+
 async function sendCurrentSRToN8N() {
   const cur = getCurrentSR();
   if (!cur?.sr_html) return;
@@ -39,6 +47,15 @@ async function sendCurrentSRToN8N() {
 }
 
 async function gerar_relatorio_US() {
+  if (gerar_relatorio_US._busy) {
+    return;
+  }
+
+  gerar_relatorio_US._busy = true;
+  setIAButtonLoading(true);
+
+  let quill = null;
+  let backupConteudo = "";
   try {
     const editorEl = document.getElementById("editorRelatorio");
     if (!editorEl) {
@@ -46,7 +63,7 @@ async function gerar_relatorio_US() {
       return;
     }
 
-    const quill = editorEl.__quill;
+    quill = editorEl.__quill;
     if (!quill) {
       alert("❌ O Quill ainda não foi inicializado (editorEl.__quill vazio).");
       return;
@@ -101,7 +118,7 @@ async function gerar_relatorio_US() {
     });
 
     if (!resposta.ok) throw new Error("Erro ao enviar o relatório para o n8n.");
-    const BackupConteudo = quill.root.innerHTML;
+    backupConteudo = quill.root.innerHTML;
     const respostaJson = await resposta.json();
     const textoResposta = respostaJson.text || "⚠️ Resposta vazia.";
 
@@ -115,14 +132,19 @@ async function gerar_relatorio_US() {
     window.__CURRENT_SR__ = null;
     // Atualiza o estado do botão (desativa se não tiver mais SR)
     updateSRButtonState(); 
-    } catch (e) {
-        console.error("Falha ao substituir relatório, restaurando backup:", e);
+  } catch (e) {
+    console.error("Falha ao substituir relatório, restaurando backup:", e);
 
-         // ✅ Restaura o conteúdo original se algo der errado
-        quill.setText("", "silent");
-        quill.clipboard.dangerouslyPasteHTML(0, BackupConteudo, "silent");
-        quill.setSelection(quill.getLength(), 0, "silent");
+    if (quill && backupConteudo) {
+      // ✅ Restaura o conteúdo original se algo der errado
+      quill.setText("", "silent");
+      quill.clipboard.dangerouslyPasteHTML(0, backupConteudo, "silent");
+      quill.setSelection(quill.getLength(), 0, "silent");
+    }
 
     alert("❌ Erro ao atualizar o relatório. O conteúdo original foi restaurado.");
-    }
+  } finally {
+    gerar_relatorio_US._busy = false;
+    setIAButtonLoading(false);
+  }
 }

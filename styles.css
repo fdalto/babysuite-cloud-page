@@ -525,10 +525,40 @@ body{
   border-radius: 14px;
   overflow: hidden;
   box-shadow: var(--shadow-strong);
-  transition: transform .15s ease;
+  transition: transform .15s ease, opacity .15s ease;
 }
 .btn-iahelp img{ width:56px; height:56px; }
 .btn-iahelp:hover{ transform: scale(1.03); }
+.btn-iahelp:disabled{
+  cursor: wait;
+  opacity: 0.9;
+}
+.btn-iahelp.is-loading{
+  pointer-events: none;
+}
+.btn-iahelp.is-loading::after{
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 18px;
+  border: 3px solid rgba(59, 130, 246, 0.28);
+  border-top-color: rgba(59, 130, 246, 1);
+  border-right-color: rgba(14, 165, 233, 0.9);
+  animation: ia-halo-spin 0.95s linear infinite, ia-halo-pulse 1.3s ease-in-out infinite;
+}
+
+@keyframes ia-halo-spin{
+  to{ transform: rotate(360deg); }
+}
+
+@keyframes ia-halo-pulse{
+  0%, 100%{
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.15);
+  }
+  50%{
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.35);
+  }
+}
 
 .btn-sr{
   position:absolute;
