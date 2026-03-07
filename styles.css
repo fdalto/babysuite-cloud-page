@@ -539,11 +539,12 @@ body{
 .btn-iahelp.is-loading::after{
   content: "";
   position: absolute;
-  inset: -7px;
+  inset: 2px;
   border-radius: 18px;
   border: 3px solid rgba(59, 130, 246, 0.28);
   border-top-color: rgba(59, 130, 246, 1);
   border-right-color: rgba(14, 165, 233, 0.9);
+  pointer-events: none;
   animation: ia-halo-spin 0.95s linear infinite, ia-halo-pulse 1.3s ease-in-out infinite;
 }
 
